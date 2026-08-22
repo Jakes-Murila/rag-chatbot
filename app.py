@@ -1,115 +1,135 @@
-# Import necessary libraries
-import databutton as db
+"""Streamlit interface for grounded questions over uploaded PDFs."""
+
+from __future__ import annotations
+
+import hashlib
+from typing import Protocol
+
 import streamlit as st
-import openai
-from brain import get_index_for_pdf
-from langchain.chains import RetrievalQA
-from langchain.chat_models import ChatOpenAI
-import os
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
-# Set the title for the Streamlit app
-st.title("RAG enhanced Chatbot")
+from ragchat.config import Settings, load_settings
+from ragchat.documents import PdfExtractionError, documents_from_uploads
+from ragchat.rag import answer_question, build_vector_store
 
-# Set up the OpenAI API key from databutton secrets
-os.environ["OPENAI_API_KEY"] = db.secrets.get("OPENAI_API_KEY")
-openai.api_key = db.secrets.get("OPENAI_API_KEY")
+st.set_page_config(page_title="PDF RAG Chat", page_icon="📚", layout="wide")
+st.title("📚 Ask your PDFs")
+st.caption("Answers are generated from the uploaded documents and include page-level sources.")
 
 
-# Cached function to create a vectordb for the provided PDF files
-@st.cache_data
-def create_vectordb(files, filenames):
-    # Show a spinner while creating the vectordb
-    with st.spinner("Vector database"):
-        vectordb = get_index_for_pdf(
-            [file.getvalue() for file in files], filenames, openai.api_key
-        )
-    return vectordb
+class UploadedPdf(Protocol):
+    name: str
+
+    def getvalue(self) -> bytes: ...
 
 
-# Upload PDF files using Streamlit's file uploader
-pdf_files = st.file_uploader("", type="pdf", accept_multiple_files=True)
+def get_secret_key() -> str | None:
+    """Read the optional Streamlit secret without exposing it to the UI."""
+    try:
+        return st.secrets.get("OPENAI_API_KEY")
+    except FileNotFoundError:
+        return None
 
-# If PDF files are uploaded, create the vectordb and store it in the session state
-if pdf_files:
-    pdf_file_names = [file.name for file in pdf_files]
-    st.session_state["vectordb"] = create_vectordb(pdf_files, pdf_file_names)
 
-# Define the template for the chatbot prompt
-prompt_template = """
-    You are a helpful Assistant who answers to users questions based on multiple contexts given to you.
+def upload_fingerprint(files: list[UploadedPdf]) -> str:
+    """Identify the selected document set, including changed file contents."""
+    digest = hashlib.sha256()
+    for file in files:
+        digest.update(file.name.encode("utf-8"))
+        digest.update(file.getvalue())
+    return digest.hexdigest()
 
-    Keep your answer short and to the point.
-    
-    The evidence are the context of the pdf extract with metadata. 
-    
-    Carefully focus on the metadata specially 'filename' and 'page' whenever answering.
-    
-    Make sure to add filename and page number at the end of sentence you are citing to.
-        
-    Reply "Not applicable" if text is irrelevant.
-     
-    The PDF content is:
-    {pdf_extract}
-"""
 
-# Get the current prompt from the session state or set a default value
-prompt = st.session_state.get("prompt", [{"role": "system", "content": "none"}])
+def clear_chat() -> None:
+    st.session_state.messages = []
 
-# Display previous chat messages
-for message in prompt:
-    if message["role"] != "system":
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
 
-# Get the user's question using Streamlit's chat input
-question = st.chat_input("Ask anything")
+def clear_documents() -> None:
+    for key in ("vector_store", "document_fingerprint", "document_count", "messages"):
+        st.session_state.pop(key, None)
+    st.session_state.uploader_nonce += 1
 
-# Handle the user's question
+
+def render_message(message: BaseMessage) -> None:
+    role = "assistant" if isinstance(message, AIMessage) else "user"
+    with st.chat_message(role):
+        st.markdown(str(message.content))
+
+
+try:
+    settings: Settings = load_settings(get_secret_key())
+except ValueError:
+    st.info("Add `OPENAI_API_KEY` to a local `.env` file or `.streamlit/secrets.toml` to begin.")
+    st.code("OPENAI_API_KEY=your_key_here", language="bash")
+    st.stop()
+
+st.session_state.setdefault("messages", [])
+st.session_state.setdefault("uploader_nonce", 0)
+
+with st.sidebar:
+    st.header("Documents")
+    uploaded_files = st.file_uploader(
+        "Upload one or more text-based PDFs",
+        type=["pdf"],
+        accept_multiple_files=True,
+        key=f"pdf_uploads_{st.session_state.uploader_nonce}",
+    )
+    st.caption("Scanned/image-only PDFs need OCR before they can be searched.")
+    if st.button("Clear chat", use_container_width=True):
+        clear_chat()
+        st.rerun()
+    if st.button("Remove documents", use_container_width=True):
+        clear_documents()
+        st.rerun()
+    if count := st.session_state.get("document_count"):
+        st.success(f"Ready: {count} searchable chunks")
+
+if uploaded_files:
+    fingerprint = upload_fingerprint(uploaded_files)
+    if fingerprint != st.session_state.get("document_fingerprint"):
+        uploads = [(file.name, file.getvalue()) for file in uploaded_files]
+        try:
+            with st.spinner("Reading PDFs and building the searchable index…"):
+                documents = documents_from_uploads(
+                    uploads,
+                    chunk_size=settings.chunk_size,
+                    chunk_overlap=settings.chunk_overlap,
+                )
+                st.session_state.vector_store = build_vector_store(documents, settings)
+            st.session_state.document_fingerprint = fingerprint
+            st.session_state.document_count = len(documents)
+            clear_chat()
+            st.toast("Documents are ready to search.", icon="✅")
+        except (PdfExtractionError, ValueError) as error:
+            st.error(str(error))
+        except Exception:
+            st.error("The documents could not be indexed. Check the PDF files and API key, then try again.")
+
+for message in st.session_state.messages:
+    render_message(message)
+
+question = st.chat_input(
+    "Ask a question about your PDFs",
+    disabled="vector_store" not in st.session_state,
+)
 if question:
-    vectordb = st.session_state.get("vectordb", None)
-    if not vectordb:
-        with st.message("assistant"):
-            st.write("You need to provide a PDF")
-            st.stop()
-
-    # Search the vectordb for similar content to the user's question
-    search_results = vectordb.similarity_search(question, k=3)
-    # search_results
-    pdf_extract = "/n ".join([result.page_content for result in search_results])
-
-    # Update the prompt with the pdf extract
-    prompt[0] = {
-        "role": "system",
-        "content": prompt_template.format(pdf_extract=pdf_extract),
-    }
-
-    # Add the user's question to the prompt and display it
-    prompt.append({"role": "user", "content": question})
-    with st.chat_message("user"):
-        st.write(question)
-
-    # Display an empty assistant message while waiting for the response
+    user_message = HumanMessage(content=question)
+    st.session_state.messages.append(user_message)
+    render_message(user_message)
     with st.chat_message("assistant"):
-        botmsg = st.empty()
-
-    # Call ChatGPT with streaming and display the response as it comes
-    response = []
-    result = ""
-    for chunk in openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", messages=prompt, stream=True
-    ):
-        text = chunk.choices[0].get("delta", {}).get("content")
-        if text is not None:
-            response.append(text)
-            result = "".join(response).strip()
-            botmsg.write(result)
-
-    # Add the assistant's response to the prompt
-    prompt.append({"role": "assistant", "content": result})
-
-    # Store the updated prompt in the session state
-    st.session_state["prompt"] = prompt
-    prompt.append({"role": "assistant", "content": result})
-
-    # Store the updated prompt in the session state
-    st.session_state["prompt"] = prompt
+        with st.spinner("Searching the documents…"):
+            try:
+                answer = answer_question(
+                    st.session_state.vector_store,
+                    question,
+                    st.session_state.messages[:-1],
+                    settings,
+                )
+                st.markdown(answer.text)
+                if answer.sources:
+                    st.caption("Retrieved sources: " + " · ".join(answer.sources))
+                st.session_state.messages.append(AIMessage(content=answer.text))
+            except ValueError as error:
+                st.error(str(error))
+            except Exception:
+                st.error("I couldn't answer that right now. Check your API key and try again.")
