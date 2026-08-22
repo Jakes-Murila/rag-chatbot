@@ -1,56 +1,101 @@
-# Retrieval Augmented Generation (RAG) for chatbots
-RAG enabled Chatbots using [LangChain](https://www.langchain.com) and [Databutton](https://databutton.com/login?utm_source=github&utm_medium=avra&utm_article=rag)
-![](https://github.com/avrabyt/RAG-Chatbot/blob/main/thumbnail.webp)
+# PDF RAG Chatbot
 
-- For the front-end : `app.py`
-- PDF parsing and indexing : `brain.py`
-- API keys are maintained over databutton secret management
-- Indexed are stored over session state 
+A Streamlit application for asking grounded questions across one or more uploaded PDFs. It extracts text page by page, creates provenance-preserving chunks, retrieves the most relevant excerpts with FAISS, and asks an OpenAI model to answer only from that evidence.
 
-Oversimplified explanation : (**Retrieval**) Fetch the top N similar contexts via similarity search from the indexed PDF files -> concatanate those to the prompt (**Prompt Augumentation**) -> Pass it to the LLM -> which further generates response (**Generation**) like any LLM does. **More in the blog!**
+> This application is intended for text-based PDFs. Image-only/scanned PDFs need OCR before upload.
 
-**Blog Post - [Here](https://medium.com/databutton/why-your-next-ai-product-needs-rag-implemented-in-it-9ee22f9770c8)**
+## How it works
 
-**YouTube video - [Here](https://youtu.be/Yh1GEWqgkt0)**
+```text
+PDF uploads → text extraction + cleanup → page-aware chunks → OpenAI embeddings + FAISS
+                                                                    ↓
+Question + recent chat history → relevant excerpts → grounded OpenAI answer + source citations
+```
 
-To get started quickly, you can use the “Chat with PDF” [template](https://databutton.com/new?templateId=pt-x2Rh7dEYwIuCxXaR) within Databutton 🚀
+Every chunk retains its original filename and page number. The answer prompt instructs the model to say when the evidence does not answer the question, and the UI shows the retrieved source pages separately.
 
-> Alternatively, you can use [Streamlit](https://streamlit.io) to build and deploy! In that case few changes such as `st.secrets` needs to be implemented!
+## Setup
 
-# Similar projects
+Prerequisites: Python 3.10 or newer and an OpenAI API key with access to the selected model.
 
-#### [Building a Simple Chatbot using ChatGPTAPI & Databutton with memory 🧠](https://github.com/avrabyt/MemoryBot)
+```powershell
+git clone https://github.com/Jakes-Murila/rag-chatbot.git
+cd rag-chatbot
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+```
 
->Memory implementation can also be an interesting feature in this current RAG enabled Chatbot.
+Set `OPENAI_API_KEY` in `.env`, then start the app:
 
-Repo - [MemoryBot](https://github.com/avrabyt/MemoryBot)
+```powershell
+streamlit run app.py
+```
 
-The live demo app is hosted over [here](https://next.databutton.com/v/lgzxq112/Memory_Bot)
+On macOS/Linux, activate the virtual environment with `source .venv/bin/activate`.
 
-Blog - [here](https://medium.com/@avra42/how-to-build-a-chatbot-with-chatgpt-api-and-a-conversational-memory-in-python-8d856cda4542) 
+### Streamlit secrets (optional)
 
-Video - [here](https://youtu.be/cHjlperESbg)
+Instead of `.env`, create `.streamlit/secrets.toml` locally:
 
-#### [PDF Chatbot with Memory](https://github.com/avrabyt/PersonalMemoryBot)
-> Similar to Chat with PDF approach, with enabled memory. 
+```toml
+OPENAI_API_KEY = "your_key_here"
+```
 
-Demo App - [here](https://next.databutton.com/v/lgzxq112/Personalised_Memory_Bot)
+Both `.env` and Streamlit secrets are ignored by Git. Never commit a real API key.
 
-Video - [here](https://youtu.be/daMNGGPJkEE)
+## Configuration
 
-Blog - [here](https://medium.com/@avra42/how-to-build-a-personalized-pdf-chat-bot-with-conversational-memory-965280c160f8)
+All optional configuration uses environment variables:
 
-![](https://github.com/avrabyt/RAG-Chatbot/blob/main/compare%20medium.gif)
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | — | Required API key. |
+| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI chat model used for answers. |
+| `RAG_CHUNK_SIZE` | `1200` | Characters in each retrieval chunk. |
+| `RAG_CHUNK_OVERLAP` | `200` | Shared characters between chunks. Must be smaller than the chunk size. |
+| `RAG_RETRIEVAL_K` | `4` | Number of relevant chunks passed to the model. |
 
+## Using the app
 
+1. Add one or more PDF files in the sidebar. A new or changed set is indexed once for the current browser session.
+2. Ask a focused question in the chat box.
+3. Review the retrieved filename/page citations below each answer.
+4. Use **Clear chat** to retain the document index, or **Remove documents** to clear the session completely.
 
+The vector index stays in Streamlit session state only; uploaded documents are not persisted by this project.
 
+## Project structure
 
+```text
+app.py                    # Streamlit UI and session-state lifecycle
+ragchat/
+  config.py               # Environment validation and RAG settings
+  documents.py            # PDF extraction, cleanup, and chunking
+  rag.py                  # Embeddings, FAISS retrieval, and grounded generation
+tests/                    # Fast unit tests with no real API calls
+.env.example              # Safe environment-variable template
+```
 
+## Development
 
+Run the unit tests after activating the virtual environment:
 
+```powershell
+pytest
+```
 
+Ruff settings are included in `pyproject.toml`; if you use Ruff locally, run `ruff check .`. Tests cover configuration validation, PDF cleanup and page metadata, chunk provenance, and source-citation formatting. Calls to OpenAI are intentionally not made in tests.
 
+## Troubleshooting
 
+- **“Add OPENAI_API_KEY”**: Copy `.env.example` to `.env`, add a valid key, and restart Streamlit.
+- **Indexing fails**: Verify the file is a readable, text-based PDF and that your API key can create embeddings.
+- **No answer found**: Rephrase the question or upload a PDF that contains the needed information; the assistant should not infer facts absent from the retrieved excerpts.
+- **Scanned PDF**: Run OCR first. `pypdf` extracts embedded text but does not perform OCR.
 
+## License
 
+This project is available under the [MIT License](LICENSE).
