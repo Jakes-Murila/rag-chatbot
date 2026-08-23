@@ -14,6 +14,7 @@ class Settings:
 
     openai_api_key: str
     model: str = "gpt-4o-mini"
+    embedding_model: str = "text-embedding-3-small"
     chunk_size: int = 1200
     chunk_overlap: int = 200
     retrieval_k: int = 4
@@ -47,6 +48,7 @@ def load_settings(api_key: str | None = None) -> Settings:
     return Settings(
         openai_api_key=key,
         model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        embedding_model=os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
         retrieval_k=_positive_int("RAG_RETRIEVAL_K", 4),

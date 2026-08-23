@@ -28,7 +28,10 @@ def build_vector_store(documents: Sequence[Document], settings: Settings) -> FAI
     """Embed a non-empty document collection into an in-memory FAISS store."""
     if not documents:
         raise ValueError("Cannot build an index without document chunks.")
-    embeddings = OpenAIEmbeddings(api_key=settings.openai_api_key)
+    embeddings = OpenAIEmbeddings(
+        model=settings.embedding_model,
+        api_key=settings.openai_api_key,
+    )
     return FAISS.from_documents(list(documents), embeddings)
 
 

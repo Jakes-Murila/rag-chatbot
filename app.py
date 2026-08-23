@@ -56,6 +56,20 @@ def render_message(message: BaseMessage) -> None:
         st.markdown(str(message.content))
 
 
+def indexing_error_message(error: Exception) -> str:
+    """Turn expected provider failures into instructions that do not expose secrets."""
+    error_type = type(error).__name__
+    if error_type == "AuthenticationError":
+        return "OpenAI rejected the API key. Check that `.env` contains the complete active key."
+    if error_type in {"PermissionDeniedError", "NotFoundError"}:
+        return "This API key cannot use the configured embedding model. Check its OpenAI project permissions."
+    if error_type == "RateLimitError":
+        return "OpenAI could not process the embedding request. Check project billing and usage limits, then retry."
+    if error_type in {"APIConnectionError", "APITimeoutError"}:
+        return "The app could not reach OpenAI. Check your internet connection and retry."
+    return "The documents could not be indexed. Ensure the PDF contains selectable text, then try again."
+
+
 try:
     settings: Settings = load_settings(get_secret_key())
 except ValueError:
@@ -75,10 +89,10 @@ with st.sidebar:
         key=f"pdf_uploads_{st.session_state.uploader_nonce}",
     )
     st.caption("Scanned/image-only PDFs need OCR before they can be searched.")
-    if st.button("Clear chat", use_container_width=True):
+    if st.button("Clear chat", width="stretch"):
         clear_chat()
         st.rerun()
-    if st.button("Remove documents", use_container_width=True):
+    if st.button("Remove documents", width="stretch"):
         clear_documents()
         st.rerun()
     if count := st.session_state.get("document_count"):
@@ -102,8 +116,8 @@ if uploaded_files:
             st.toast("Documents are ready to search.", icon="✅")
         except (PdfExtractionError, ValueError) as error:
             st.error(str(error))
-        except Exception:
-            st.error("The documents could not be indexed. Check the PDF files and API key, then try again.")
+        except Exception as error:
+            st.error(indexing_error_message(error))
 
 for message in st.session_state.messages:
     render_message(message)
