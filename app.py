@@ -110,9 +110,7 @@ if uploaded_files:
                     chunk_overlap=settings.chunk_overlap,
                 )
                 st.session_state.vector_store = build_vector_store(documents, settings)
-            st.session_state.document_fingerprint = fingerprint
-            st.session_state.document_count = len(documents)
-            clear_chat()
+            st.session_state.d
             st.toast("Documents are ready to search.", icon="✅")
         except (PdfExtractionError, ValueError) as error:
             st.error(str(error))
