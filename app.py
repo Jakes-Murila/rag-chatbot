@@ -126,13 +126,6 @@ question = st.chat_input(
     "Ask a question about your PDFs",
     disabled="vector_store" not in st.session_state,
 )
-if question:
-    user_message = HumanMessage(content=question)
-    st.session_state.messages.append(user_message)
-    render_message(user_message)
-    with st.chat_message("assistant"):
-        with st.spinner("Searching the documents…"):
-            try:
                 answer = answer_question(
                     st.session_state.vector_store,
                     question,
