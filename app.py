@@ -96,12 +96,7 @@ with st.sidebar:
         clear_documents()
         st.rerun()
     if count := st.session_state.get("document_count"):
-        st.success(f"Ready: {count} searchable chunks")
-
-if uploaded_files:
-    fingerprint = upload_fingerprint(uploaded_files)
-    if fingerprint != st.session_state.get("document_fingerprint"):
-        uploads = [(file.name, file.getvalue()) for file in uploaded_files]
+        st.success(f"Ready: {count} search) for file in uploaded_files]
         try:
             with st.spinner("Reading PDFs and building the searchable index…"):
                 documents = documents_from_uploads(
