@@ -86,11 +86,7 @@ with st.sidebar:
         "Upload one or more text-based PDFs",
         type=["pdf"],
         accept_multiple_files=True,
-        key=f"pdf_uploads_{st.session_state.uploader_nonce}",
-    )
-    st.caption("Scanned/image-only PDFs need OCR before they can be searched.")
-    if st.button("Clear chat", width="stretch"):
-        clear_chat()
+        key=f"pdf_uploads_{st.session_s
         st.rerun()
     if st.button("Remove documents", width="stretch"):
         clear_documents()
