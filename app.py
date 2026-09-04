@@ -17,11 +17,7 @@ st.title("📚 Ask your PDFs")
 st.caption("Answers are generated from the uploaded documents and include page-level sources.")
 
 
-class UploadedPdf(Protocol):
-    name: str
-
-    def getvalue(self) -> bytes: ...
-
+class UploadedPdf(Proto
 
 def get_secret_key() -> str | None:
     """Read the optional Streamlit secret without exposing it to the UI."""
