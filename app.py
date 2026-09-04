@@ -76,6 +76,12 @@ except ValueError:
     st.info("Add `OPENAI_API_KEY` to a local `.env` file or `.streamlit/secrets.toml` to begin.")
     st.code("OPENAI_API_KEY=your_key_here", language="bash")
     st.stop()
+
+st.session_state.setdefault("messages", [])
+st.session_state.setdefault("uploader_nonce", 0)
+
+with st.sidebar:
+    st.header("Documents")
     uploaded_files = st.file_uploader(
         "Upload one or more text-based PDFs",
         type=["pdf"],
