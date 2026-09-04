@@ -142,8 +142,4 @@ if question:
                 st.markdown(answer.text)
                 if answer.sources:
                     st.caption("Retrieved sources: " + " · ".join(answer.sources))
-                st.session_state.messages.append(AIMessage(content=answer.text))
-            except ValueError as error:
-                st.error(str(error))
-            except Exception:
-                st.error("I couldn't answer that right now. Check your API key and try again.")
+                st.session_state.messages.append(t now. Check your API key and try again.")
