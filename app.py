@@ -140,4 +140,10 @@ if question:
                     settings,
                 )
                 st.markdown(answer.text)
-           couldn't answer that right now. Check your API key and try again.")
+                if answer.sources:
+                    st.caption("Retrieved sources: " + " · ".join(answer.sources))
+                st.session_state.messages.append(AIMessage(content=answer.text))
+            except ValueError as error:
+                st.error(str(error))
+            except Exception:
+                st.error("I couldn't answer that right now. Check your API key and try again.")
