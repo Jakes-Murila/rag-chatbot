@@ -26,9 +26,6 @@ class UploadedPdf(Protocol):
 def get_secret_key() -> str | None:
     """Read the optional Streamlit secret without exposing it to the UI."""
     try:
-        return st.secrets.get("OPENAI_API_KEY")
-    except FileNotFoundError:
-        return None
 
 
 def upload_fingerprint(files: list[UploadedPdf]) -> str:
