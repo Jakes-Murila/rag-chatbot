@@ -89,7 +89,14 @@ with st.sidebar:
         key=f"pdf_uploads_{st.session_state.uploader_nonce}",
     )
     st.caption("Scanned/image-only PDFs need OCR before they can be searched.")
-    if st.button("Clear chearchable chunks")
+    if st.button("Clear chat", width="stretch"):
+        clear_chat()
+        st.rerun()
+    if st.button("Remove documents", width="stretch"):
+        clear_documents()
+        st.rerun()
+    if count := st.session_state.get("document_count"):
+        st.success(f"Ready: {count} searchable chunks")
 
 if uploaded_files:
     fingerprint = upload_fingerprint(uploaded_files)
