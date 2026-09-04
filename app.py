@@ -133,7 +133,15 @@ if question:
     with st.chat_message("assistant"):
         with st.spinner("Searching the documents…"):
             try:
-                answer = answsources: " + " · ".join(answer.sources))
+                answer = answer_question(
+                    st.session_state.vector_store,
+                    question,
+                    st.session_state.messages[:-1],
+                    settings,
+                )
+                st.markdown(answer.text)
+                if answer.sources:
+                    st.caption("Retrieved sources: " + " · ".join(answer.sources))
                 st.session_state.messages.append(AIMessage(content=answer.text))
             except ValueError as error:
                 st.error(str(error))
