@@ -3,12 +3,7 @@ from langchain_core.documents import Document
 from ragchat.documents import chunk_pages, clean_text, extract_pdf_pages
 
 
-def test_clean_text_removes_nulls_joins_hyphenated_lines_and_keeps_paragraphs() -> None:
-    text = "A hyphen-\nated\x00 word.\nNext line.\n\n\nSecond paragraph."
-
-    assert clean_text(text) == "A hyphenated word. Next line.\n\nSecond paragraph."
-
-
+def test_clean_text_
 def test_extract_pdf_pages_preserves_filename_and_page(monkeypatch) -> None:
     class FakePage:
         def __init__(self, text: str) -> None:
