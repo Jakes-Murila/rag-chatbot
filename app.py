@@ -113,6 +113,10 @@ if uploaded_files:
             st.session_state.document_fingerprint = fingerprint
             st.session_state.document_count = len(documents)
             clear_chat()
+            st.toast("Documents are ready to search.", icon="✅")
+        except (PdfExtractionError, ValueError) as error:
+            st.error(str(error))
+        except Exception as error:
             st.error(indexing_error_message(error))
 
 for message in st.session_state.messages:
