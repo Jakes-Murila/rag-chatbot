@@ -14,7 +14,9 @@ from ragchat.rag import answer_question, build_vector_store
 
 st.set_page_config(page_title="PDF RAG Chat", page_icon="📚", layout="wide")
 st.title("📚 Ask your PDFs")
-st.caption("Answers are gener
+st.caption("Answers are generated from the uploaded documents and include page-level sources.")
+
+
 class UploadedPdf(Protocol):
     name: str
 
