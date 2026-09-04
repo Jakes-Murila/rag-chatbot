@@ -16,7 +16,14 @@ st.set_page_config(page_title="PDF RAG Chat", page_icon="📚", layout="wide")
 st.title("📚 Ask your PDFs")
 st.caption("Answers are generated from the uploaded documents and include page-level sources.")
 
- str | None:
+
+class UploadedPdf(Protocol):
+    name: str
+
+    def getvalue(self) -> bytes: ...
+
+
+def get_secret_key() -> str | None:
     """Read the optional Streamlit secret without exposing it to the UI."""
     try:
         return st.secrets.get("OPENAI_API_KEY")
