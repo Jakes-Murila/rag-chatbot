@@ -29,7 +29,12 @@ def get_secret_key() -> str | None:
         return st.secrets.get("OPENAI_API_KEY")
     except FileNotFoundError:
         return None
-s:
+
+
+def upload_fingerprint(files: list[UploadedPdf]) -> str:
+    """Identify the selected document set, including changed file contents."""
+    digest = hashlib.sha256()
+    for file in files:
         digest.update(file.name.encode("utf-8"))
         digest.update(file.getvalue())
     return digest.hexdigest()
