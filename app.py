@@ -46,7 +46,9 @@ def clear_chat() -> None:
 
 def clear_documents() -> None:
     for key in ("vector_store", "document_fingerprint", "document_count", "messages"):
-        st.sessi
+        st.session_state.pop(key, None)
+    st.session_state.uploader_nonce += 1
+
 
 def render_message(message: BaseMessage) -> None:
     role = "assistant" if isinstance(message, AIMessage) else "user"
