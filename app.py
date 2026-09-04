@@ -117,16 +117,7 @@ if uploaded_files:
         except (PdfExtractionError, ValueError) as error:
             st.error(str(error))
         except Exception as error:
-            st.error(indexing_error_message(error))
-
-for message in st.session_state.messages:
-    render_message(message)
-
-question = st.chat_input(
-    "Ask a question about your PDFs",
-    disabled="vector_store" not in st.session_state,
-)
-if question:
+            st.error(indexing_
     user_message = HumanMessage(content=question)
     st.session_state.messages.append(user_message)
     render_message(user_message)
