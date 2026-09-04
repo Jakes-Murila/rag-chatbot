@@ -71,12 +71,6 @@ def indexing_error_message(error: Exception) -> str:
 
 
 try:
-    settings: Settings = load_settings(get_secret_key())
-except ValueError:
-    st.info("Add `OPENAI_API_KEY` to a local `.env` file or `.streamlit/secrets.toml` to begin.")
-    st.code("OPENAI_API_KEY=your_key_here", language="bash")
-    st.stop()
-
 st.session_state.setdefault("messages", [])
 st.session_state.setdefault("uploader_nonce", 0)
 
