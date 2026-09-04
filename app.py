@@ -65,7 +65,13 @@ def indexing_error_message(error: Exception) -> str:
         return "This API key cannot use the configured embedding model. Check its OpenAI project permissions."
     if error_type == "RateLimitError":
         return "OpenAI could not process the embedding request. Check project billing and usage limits, then retry."
-    if error_type in  load_settings(get_secret_key())
+    if error_type in {"APIConnectionError", "APITimeoutError"}:
+        return "The app could not reach OpenAI. Check your internet connection and retry."
+    return "The documents could not be indexed. Ensure the PDF contains selectable text, then try again."
+
+
+try:
+    settings: Settings = load_settings(get_secret_key())
 except ValueError:
     st.info("Add `OPENAI_API_KEY` to a local `.env` file or `.streamlit/secrets.toml` to begin.")
     st.code("OPENAI_API_KEY=your_key_here", language="bash")
